@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>百炼智能体对话</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/lib/highlight.min.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(to bottom right, #2563eb, #3b82f6);
+            --sidebar-width: 260px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background: #ffffff;
+            color: #333333;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #f7f7f8;
+            border-right: 1px solid #e5e5e5;
+            display: flex;
+            flex-direction: column;
+            padding: 0.8rem;
+        }
+
+        .new-chat-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            color: #333333;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-item:hover {
+            background: #e5e5e5;
+        }
+
+        /* 主聊天区域样式 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message {
+            display: flex;
+            padding: 1.5rem;
+            gap: 1rem;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .message.user {
+            background: #ffffff;
+        }
+
+        .message.assistant {
+            background: #f7f7f8;
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 0.2rem;
+            background: var(--primary-gradient);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+            color: #333333;
+        }
+
+        /* 输入区域样式 */
+        .input-container {
+            padding: 1.5rem;
+            background: #ffffff;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .input-wrapper {
+            max-width: 48rem;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            min-height: 3rem;
+            max-height: 20rem;
+            padding: 0.8rem 3rem 0.8rem 1rem;
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.5rem;
+            color: #333333;
+            font-size: 1rem;
+            line-height: 1.5;
+            resize: none;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .send-button {
+            position: absolute;
+            right: 0.8rem;
+            bottom: 0.8rem;
+            background: transparent;
+            border: none;
+            color: #3b82f6;
+            cursor: pointer;
+            padding: 0.2rem;
+        }
+
+        /* Markdown 样式 */
+        .markdown-content pre {
+            background: #f6f8fa !important;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .markdown-content code {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+
+        .markdown-content p {
+            margin: 0.8rem 0;
+        }
+
+        /* 打字指示器样式 */
+        .typing-indicator {
+            display: none;
+            padding: 1.5rem;
+            background: #f7f7f8;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #2563eb;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.3rem;
+            animation: bounce 1s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <button class="new-chat-btn" onclick="clearChat()">
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                新对话
+            </button>
+            <div class="chat-history" id="chatHistory">
+                <!-- 历史对话列表 -->
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="chat-container" id="messageContainer">
+                <!-- 消息内容 -->
+            </div>
+            
+            <div class="typing-indicator" id="typingIndicator">
+                <span></span><span></span><span></span>
+            </div>
+
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        class="message-input"
+                        id="messageInput"
+                        placeholder="输入消息..."
+                        rows="1"
+                        onInput="autoResize(this)"
+                    ></textarea>
+                    <button class="send-button" id="sendButton" onclick="sendMessage()">
+                        <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1.2em" width="1.2em">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+        let messageHistory = [];
+
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true
+        });
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const message = messageInput.value.trim();
+
+            if (!message) return;
+
+            try {
+                sendButton.disabled = true;
+                typingIndicator.style.display = 'flex';
+                
+                messageHistory.push({ role: 'user', content: message });
+                appendMessage('user', message);
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+
+                const response = await fetch('http://localhost:5000/chat/api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: message,
+                        session_id: currentSessionId,
+                        message_history: messageHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.data.session_id) {
+                        currentSessionId = data.data.session_id;
+                        addToHistory(message, currentSessionId);
+                    }
+                    
+                    messageHistory.push({ role: 'assistant', content: data.data.text });
+                    appendMessage('assistant', data.data.text);
+                } else {
+                    throw new Error(data.message || '未知错误');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                appendMessage('system', '发生错误，请重试');
+            } finally {
+                sendButton.disabled = false;
+                typingIndicator.style.display = 'none';
+            }
+        }
+
+        function appendMessage(type, content) {
+            const messageContainer = document.getElementById('messageContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = type === 'user' ? 'U' : 'A';
+            messageDiv.appendChild(avatar);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (type === 'assistant') {
+                const markdownContent = document.createElement('div');
+                markdownContent.className = 'markdown-content';
+                markdownContent.innerHTML = marked.parse(content);
+                contentDiv.appendChild(markdownContent);
+                
+                contentDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightBlock(block);
+                });
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            messageContainer.appendChild(messageDiv);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+
+        function addToHistory(message, sessionId) {
+            const history = document.getElementById('chatHistory');
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.textContent = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+            item.setAttribute('data-session-id', sessionId);
+            history.insertBefore(item, history.firstChild);
+        }
+
+        function clearChat() {
+            currentSessionId = null;
+            messageHistory = [];
+            document.getElementById('messageContainer').innerHTML = '';
+            document.getElementById('chatHistory').innerHTML = '';
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html> 
