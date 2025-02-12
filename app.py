@@ -28,8 +28,28 @@ except Exception as e:
 def chat_page():
     return render_template('chat.html')
 
-@app.route('/chat/api', methods=['POST'])
+@app.route('/chat/api', methods=['GET', 'POST'])
 def chat_api():
+    if request.method == 'GET':
+        try:
+            # 测试智能体连接
+            test_result = agent_client.chat(prompt="测试连接")
+            if test_result.get('success'):
+                return jsonify({
+                    'status': 'ok',
+                    'message': 'API is running and agent is connected'
+                })
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Agent connection failed: {test_result.get("message")}'
+                }), 500
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': f'API test failed: {str(e)}'
+            }), 500
+
     try:
         logger.debug(f"收到请求头: {dict(request.headers)}")
         logger.debug(f"收到请求体: {request.get_data(as_text=True)}")

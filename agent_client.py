@@ -38,7 +38,10 @@ class AgentClient:
         try:
             logger.debug(f"准备调用智能体 - prompt: {prompt}, session_id: {session_id}")
             
-            # 构建调用参数
+            # 验证 API key
+            if not self.api_key or not self.app_id:
+                raise ValueError("API key 或 app_id 未设置")
+            
             params = {
                 "api_key": self.api_key,
                 "app_id": self.app_id,
@@ -60,34 +63,42 @@ class AgentClient:
                 
             logger.debug(f"调用参数: {params}")
             
-            # 调用智能体
-            if stream:
-                response = Application.streamCall(**params)
-            else:
-                response = Application.call(**params)
-
-            logger.debug(f"智能体原始响应: {response}")
-
-            # 处理响应
-            if response.status_code != HTTPStatus.OK:
-                error_msg = f"智能体调用失败 - code: {response.status_code}, message: {response.message}"
-                logger.error(error_msg)
+            try:
+                # 调用智能体
+                if stream:
+                    response = Application.streamCall(**params)
+                else:
+                    response = Application.call(**params)
+                
+                logger.debug(f"智能体原始响应: {response}")
+                
+                # 处理响应
+                if response.status_code != HTTPStatus.OK:
+                    error_msg = f"智能体调用失败 - code: {response.status_code}, message: {response.message}"
+                    logger.error(error_msg)
+                    return {
+                        "success": False,
+                        "request_id": response.request_id,
+                        "code": response.status_code,
+                        "message": response.message
+                    }
+                
+                # 确保返回session_id
+                return {
+                    "success": True,
+                    "data": {
+                        "text": response.output.text.replace('\n', '  \n'),
+                        "session_id": response.output.session_id if hasattr(response.output, 'session_id') else None
+                    },
+                    "usage": response.usage
+                }
+                
+            except Exception as e:
+                logger.error(f"调用智能体API时发生错误: {str(e)}", exc_info=True)
                 return {
                     "success": False,
-                    "request_id": response.request_id,
-                    "code": response.status_code,
-                    "message": response.message
+                    "message": f"API调用失败: {str(e)}"
                 }
-            
-            # 确保返回session_id
-            return {
-                "success": True,
-                "data": {
-                    "text": response.output.text.replace('\n', '  \n'),
-                    "session_id": response.output.session_id
-                },
-                "usage": response.usage
-            }
             
         except Exception as e:
             logger.error(f"调用智能体时发生错误: {str(e)}", exc_info=True)
